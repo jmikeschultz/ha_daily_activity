@@ -1,0 +1,48 @@
+{
+  "title": "Daily Activity",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create Daily Activity",
+        "description": "Counts OFF → ON transitions across selected binary sensors and keeps daily totals for heatmaps.",
+        "data": {
+          "name": "Name",
+          "entities": "Binary sensors",
+          "time_zone": "Time zone",
+          "retention_days": "Days to retain"
+        }
+      },
+      "reconfigure": {
+        "title": "Edit Daily Activity",
+        "description": "Change the sensors or settings for this Daily Activity.",
+        "data": {
+          "name": "Name",
+          "entities": "Binary sensors",
+          "time_zone": "Time zone",
+          "retention_days": "Days to retain"
+        }
+      }
+    },
+    "error": {
+      "invalid_time_zone": "Enter a valid IANA time zone, for example America/New_York or America/Los_Angeles.",
+      "no_entities": "Select at least one binary sensor."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit Daily Activity",
+        "data": {
+          "name": "Name",
+          "entities": "Binary sensors",
+          "time_zone": "Time zone",
+          "retention_days": "Days to retain"
+        }
+      }
+    },
+    "error": {
+      "invalid_time_zone": "Enter a valid IANA time zone, for example America/New_York or America/Los_Angeles.",
+      "no_entities": "Select at least one binary sensor."
+    }
+  }
+}

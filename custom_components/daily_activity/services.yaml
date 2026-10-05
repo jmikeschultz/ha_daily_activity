@@ -1,0 +1,19 @@
+add_source_entity:
+  name: Add source entity
+  description: Add one binary sensor to an existing Daily Activity.
+  fields:
+    daily_activity:
+      name: Daily Activity
+      description: The Daily Activity sensor to modify.
+      required: true
+      selector:
+        entity:
+          domain: sensor
+
+    source_entity:
+      name: Source entity
+      description: The binary sensor to add.
+      required: true
+      selector:
+        entity:
+          domain: binary_sensor
