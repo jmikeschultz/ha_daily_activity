@@ -3,13 +3,9 @@
   "config": {
     "step": {
       "user": {
-        "title": "Create Daily Activity",
-        "description": "Counts OFF → ON transitions across selected binary sensors and keeps daily totals for heatmaps.",
+        "title": "Select source mode",
         "data": {
-          "name": "Name",
-          "entities": "Binary sensors",
-          "time_zone": "Time zone",
-          "retention_days": "Days to retain"
+          "source_mode": "Source mode"
         }
       },
       "reconfigure": {
@@ -19,13 +15,54 @@
           "name": "Name",
           "entities": "Binary sensors",
           "time_zone": "Time zone",
-          "retention_days": "Days to retain"
+          "retention_days": "Days to retain",
+          "transition_direction": "Transition direction",
+          "track_durations": "Track daily state durations"
         }
+      },
+      "binary_sensors": {
+        "title": "Create Daily Activity",
+        "description": "Counts the selected transition direction across binary sensors and keeps daily totals for heatmaps.",
+        "data": {
+          "name": "Name",
+          "entities": "Binary sensors",
+          "time_zone": "Time zone",
+          "retention_days": "Days to retain",
+          "transition_direction": "Transition direction",
+          "track_durations": "Track daily state durations"
+        }
+      },
+      "reported_intervals": {
+        "title": "Create reported-interval activity",
+        "description": "Receive historical intervals from a producer. Source IDs must be unique and cannot be renamed.",
+        "data": {
+          "name": "Name",
+          "source_id": "Stable source ID",
+          "time_zone": "Time zone",
+          "retention_days": "Days to retain",
+          "transition_direction": "Transition direction"
+        }
+      },
+      "credentials": {
+        "title": "Copy the ingestion token",
+        "description": "Save this token now: `{token}`. It is shown only during issuance. The token authorizes writes for this source only. Submit to finish.",
+        "data": {}
       }
     },
     "error": {
       "invalid_time_zone": "Enter a valid IANA time zone, for example America/New_York or America/Los_Angeles.",
-      "no_entities": "Select at least one binary sensor."
+      "no_entities": "Select at least one binary sensor.",
+      "invalid_transition_direction": "Select OFF \u2192 ON or ON \u2192 OFF.",
+      "invalid_source_mode": "Select a supported source mode.",
+      "invalid_source_id": "Use 1\u2013128 letters, numbers, underscores, dots, colons or hyphens; start with a letter or number.",
+      "invalid_retention": "Enter a whole number of days between 30 and 2000.",
+      "invalid_credential_action": "Select keep, issue / rotate, or revoke.",
+      "source_not_loaded": "Load the reported source before managing its token.",
+      "storage_error": "Token could not be saved. The previous token remains in effect."
+    },
+    "abort": {
+      "already_configured": "This source ID is already configured.",
+      "use_options": "Edit reported-source settings and tokens through the options flow."
     }
   },
   "options": {
@@ -36,13 +73,38 @@
           "name": "Name",
           "entities": "Binary sensors",
           "time_zone": "Time zone",
-          "retention_days": "Days to retain"
+          "retention_days": "Days to retain",
+          "transition_direction": "Transition direction",
+          "track_durations": "Track daily state durations"
         }
+      },
+      "reported_options": {
+        "title": "Edit reported source",
+        "description": "Source ID: `{source_id}` (stable). Rotating or revoking takes effect immediately. Editing time zone or transition direction recalculates retained reported history.",
+        "data": {
+          "name": "Name",
+          "time_zone": "Time zone",
+          "retention_days": "Days to retain",
+          "transition_direction": "Transition direction",
+          "credential_action": "Ingestion token"
+        }
+      },
+      "credentials": {
+        "title": "Copy the ingestion token",
+        "description": "Save this token now: `{token}`. It is shown only during issuance. The token authorizes writes for this source only. Submit to finish.",
+        "data": {}
       }
     },
     "error": {
       "invalid_time_zone": "Enter a valid IANA time zone, for example America/New_York or America/Los_Angeles.",
-      "no_entities": "Select at least one binary sensor."
+      "no_entities": "Select at least one binary sensor.",
+      "invalid_transition_direction": "Select OFF \u2192 ON or ON \u2192 OFF.",
+      "invalid_source_mode": "Select a supported source mode.",
+      "invalid_source_id": "Use 1\u2013128 letters, numbers, underscores, dots, colons or hyphens; start with a letter or number.",
+      "invalid_retention": "Enter a whole number of days between 30 and 2000.",
+      "invalid_credential_action": "Select keep, issue / rotate, or revoke.",
+      "source_not_loaded": "Load the reported source before managing its token.",
+      "storage_error": "Token could not be saved. The previous token remains in effect."
     }
   }
 }

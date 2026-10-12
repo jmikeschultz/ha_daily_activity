@@ -3,7 +3,7 @@
   "name": "Daily Activity",
   "codeowners": [],
   "config_flow": true,
-  "documentation": "https://github.com/yourname/daily-activity",
+  "documentation": "https://github.com/jmikeschultz/ha_daily_activity",
   "integration_type": "helper",
   "iot_class": "local_push",
   "version": "0.1.0"

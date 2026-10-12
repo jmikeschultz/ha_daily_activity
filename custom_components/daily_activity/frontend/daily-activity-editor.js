@@ -28,12 +28,14 @@
       panel.dataset.dailyActivityEditor = "";
       panel.style.cssText = "padding:16px;margin-bottom:16px;border:1px solid var(--divider-color,#ddd);border-radius:12px";
       const heading = document.createElement("strong");
+      heading.dataset.heading = "";
       heading.textContent = "Monitored sensors";
       const sources = document.createElement("div");
       sources.dataset.sources = "";
       sources.style.cssText = "margin:8px 0 12px;overflow-wrap:anywhere;font-size:14px";
       const button = document.createElement("button");
       button.type = "button";
+      button.dataset.action = "";
       button.textContent = "Edit monitored sensors";
       button.style.cssText = "font:inherit;font-weight:500;padding:10px 16px;min-height:44px;border:0;border-radius:8px;cursor:pointer;background:var(--primary-color,#03a9f4);color:var(--text-primary-color,#fff)";
       const error = document.createElement("div");
@@ -58,9 +60,13 @@
       panel.append(heading, sources, button, error);
       container.prepend(panel);
     }
-    const sourceEntities = editor.hass?.states[editor.entry.entity_id]?.attributes.source_entities;
+    const attributes = editor.hass?.states[editor.entry.entity_id]?.attributes;
+    const reported = attributes?.source_mode === "reported_intervals";
+    panel.querySelector("[data-heading]").textContent = reported ? "Reported interval source" : "Monitored sensors";
+    panel.querySelector("[data-action]").textContent = reported ? "Edit source settings / token" : "Edit monitored sensors";
+    const sourceEntities = attributes?.source_entities;
     const sources = Array.isArray(sourceEntities) ? sourceEntities : sourceEntities ? [sourceEntities] : [];
-    const text = sources.length ? sources.join("\n") : "No source sensors reported.";
+    const text = reported ? (attributes.source_id || "Source ID unavailable.") : sources.length ? sources.join("\n") : "No source sensors reported.";
     const label = panel.querySelector("[data-sources]");
     label.style.whiteSpace = "pre-line";
     if (label.textContent !== text) label.textContent = text;
