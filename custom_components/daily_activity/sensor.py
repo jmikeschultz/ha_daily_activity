@@ -71,7 +71,7 @@ class DailyActivitySensor(SensorEntity):
             last_dt = datetime.fromisoformat(self._last_activity)
             last_activity_display = (
                 f"{self._last_activity_name} — "
-                f"{last_dt.strftime('%-I:%M %p')}"
+                f"{last_dt.strftime('%b %-d, %-I:%M %p')}"
             )
         else:
             last_activity_display = "No activity recorded yet"

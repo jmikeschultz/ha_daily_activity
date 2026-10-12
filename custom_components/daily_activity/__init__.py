@@ -1,4 +1,7 @@
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.frontend import add_extra_js_url
+from pathlib import Path
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
@@ -9,6 +12,16 @@ SERVICE_ADD_SOURCE_ENTITY = "add_source_entity"
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    url = "/daily_activity_static/daily-activity-editor.js"
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            url,
+            str(Path(__file__).parent / "frontend" / "daily-activity-editor.js"),
+            False,
+        )
+    ])
+    add_extra_js_url(hass, url + "?v=0.1.1")
+
     async def add_source_entity(call: ServiceCall) -> None:
         daily_activity_entity = call.data["daily_activity"]
         source_entity = call.data["source_entity"]

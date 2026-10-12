@@ -94,13 +94,43 @@ class DailyActivityConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return DailyActivityOptionsFlow(config_entry)
+        return DailyActivityOptionsFlow()
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Edit an existing helper without replacing its entry or history."""
+        entry = self._get_reconfigure_entry()
+        current = {**entry.data, **entry.options}
+        defaults = {**current, "name": entry.title}
+        errors = {}
+
+        if user_input is not None:
+            errors = _validate(user_input)
+            if not errors:
+                settings = dict(user_input)
+                name = settings.pop("name")
+                # Existing options must not override the edited settings.
+                options = {
+                    key: value
+                    for key, value in entry.options.items()
+                    if key not in settings
+                }
+                # The integration's update listener reloads the same entry.
+                return self.async_update_and_abort(
+                    entry,
+                    title=name,
+                    data={**entry.data, **settings},
+                    options=options,
+                    reason="reconfigure_successful",
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=_schema(self.hass.config.time_zone, defaults),
+            errors=errors,
+        )
 
 
 class DailyActivityOptionsFlow(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input=None):
         errors = {}
 
