@@ -84,6 +84,7 @@ def rebuild(records: dict, tz: ZoneInfo, direction: str, cutoff: datetime) -> di
     history, durations = {}, {}
     previous = None
     latest = None
+    outage = None
     expected = ("off", "on") if direction == TRANSITION_OFF_TO_ON else ("on", "off")
     for item in sorted(records.values(), key=lambda row: row["start"]):
         start, end = timestamp(item["start"]), timestamp(item["end"])
@@ -93,8 +94,19 @@ def rebuild(records: dict, tz: ZoneInfo, direction: str, cutoff: datetime) -> di
             day = start.astimezone(tz).date().isoformat()
             history[day] = history.get(day, 0) + 1
             latest = start.astimezone(tz).isoformat()
+        adjacent = previous is not None and previous["end"] == item["start"]
+        if adjacent and previous["state"] == "on" and item["state"] == "off":
+            outage = {"start": start.isoformat(), "end": None,
+                      "seconds": None, "status": "awaiting_report"}
+        elif outage and outage["status"] == "awaiting_report":
+            if adjacent and previous["state"] == "off" and item["state"] == "on":
+                outage = {**outage, "end": start.isoformat(), "status": "completed",
+                          "seconds": (start - timestamp(outage["start"])).total_seconds()}
+            elif not adjacent or item["state"] != "off":
+                outage = {**outage, "status": "interrupted"}
         previous = item
-    return {"history": history, "durations": durations, "last_activity": latest}
+    return {"history": history, "durations": durations, "last_activity": latest,
+            "last_outage": outage}
 
 
 class ReportedSource:
@@ -135,6 +147,8 @@ class ReportedSource:
             aggregate = rebuild(candidate["events"], self.tz, self.direction, cutoff)
             if aggregate["last_activity"] is None:
                 aggregate["last_activity"] = candidate.get("last_activity")
+            if aggregate["last_outage"] is None:
+                aggregate["last_outage"] = candidate.get("last_outage")
             candidate.update(aggregate)
             return candidate
         return await self.hass.async_add_executor_job(work)
@@ -232,7 +246,10 @@ class ReportedSource:
                     except EventError as error:
                         result.update(status="rejected", http_status=error.status, error=error.code)
                     results.append(result)
+                previous_outage = candidate.get("last_outage")
                 candidate.update(rebuild(records, self.tz, self.direction, cutoff))
+                if candidate["last_outage"] is None:
+                    candidate["last_outage"] = previous_outage
                 if candidate["last_activity"] is None:
                     candidate["last_activity"] = self.snapshot.get("last_activity")
                 return results

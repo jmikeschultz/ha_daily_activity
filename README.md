@@ -455,3 +455,29 @@ python3 -m venv /tmp/daily-activity-tests-venv
 Tests execute the integration's Python code with mocked HA services/selectors/storage boundaries, real Voluptuous schemas, real temporary files, and real aiohttp HTTP requests. They cover legacy entries, both source modes and directions, options, stable/unique IDs, token issuance/rotation/revocation, authorization isolation, malformed and oversized requests, duplicates/conflicts/overlaps, partial batches, concurrent/cancelled submissions, durable-write failures, late aggregation, multiple sources, unknown periods, midnight/DST, retention, restarts, setup/unload, and the sensor attribute contract.
 
 They do not run a full Home Assistant instance, its production HTTP middleware, or a dashboard browser. Home Assistant's supported HTTP view, options-flow, atomic Store, asynchronous static-path, and executor APIs are used; compatibility with older HA releases has not been validated. API behavior should be verified in a development HA instance before production deployment.
+
+## Last individual outage — 0.1.1
+
+Binary-sensor sources with duration tracking enabled now expose and persist
+`last_outage`: `start`, `end`, `seconds`, and `status`. A proven combined-state
+ON → OFF transition starts an outage; OFF → ON completes it. Ongoing seconds are
+projected on state updates (including the existing minute checkpoint). UTC elapsed
+time covers midnight and DST changes without resetting. Completion retains the
+record until the next observed outage. Transition counts and daily totals retain
+their existing semantics.
+
+There is no backfill from daily totals. If tracking starts while already OFF,
+there is no known start. Restarts, reloads, shutdown, or a transition to unknown
+interrupt an ongoing record: its start remains, but `seconds` becomes null and
+`status` becomes `interrupted`. The integration does not assume continuous downtime
+through gaps it could not observe. Completed records survive restarts.
+
+For reported sources, a proven contiguous ON → OFF boundary establishes the start.
+Adjacent OFF intervals are joined until a contiguous ON recovery interval supplies
+the end. The status is `awaiting_report` until recovery is reported; historical
+reports do not establish that an outage is ongoing now. Gaps or unknown intervals
+produce `interrupted` instead of a guessed duration. Complete retained interval
+history can establish an earlier outage; daily aggregates alone cannot.
+
+Snapshot Archive 0.5.0's Last Activity card supports these fields with
+`duration_mode: last_outage`. Normal `last_activity_display` remains unchanged.

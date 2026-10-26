@@ -69,6 +69,7 @@ class DailyActivitySensor(SensorEntity):
         self._duration_state = "unknown"
         self._duration_since: datetime | None = None
         self._unsub_duration = None
+        self._last_outage: dict | None = None
 
         # Most recent matching transition.
         self._last_activity_entity: str | None = None
@@ -101,6 +102,9 @@ class DailyActivitySensor(SensorEntity):
         durations = {day: dict(values) for day, values in self._durations.items()}
         if self._track_durations:
             self._accumulate_durations(datetime.now(timezone.utc), durations)
+        outage = dict(self._last_outage) if self._last_outage else None
+        if outage and outage["status"] == "ongoing":
+            outage["seconds"] = max(0, (datetime.now(timezone.utc) - datetime.fromisoformat(outage["start"])).total_seconds())
         days = self._history.keys() | durations.keys()
         return {
             "data": [
@@ -115,6 +119,7 @@ class DailyActivitySensor(SensorEntity):
             "last_activity": self._last_activity,
             "last_activity_display": last_activity_display,
             "time_zone": self._tz_name,
+            "last_outage": outage,
         }
 
     async def async_added_to_hass(self) -> None:
@@ -140,6 +145,8 @@ class DailyActivitySensor(SensorEntity):
             )
 
         if stored:
+            self._last_outage = stored.get("last_outage")
+            self._interrupt_outage()
             self._durations = {
                 day: dict(values) for day, values in stored.get("durations", {}).items()
             }
@@ -186,6 +193,7 @@ class DailyActivitySensor(SensorEntity):
         if self._track_durations:
             self._flush_durations(datetime.now(timezone.utc))
             self._duration_since = None
+            self._interrupt_outage()
             await self._save()
         await super().async_will_remove_from_hass()
 
@@ -222,6 +230,26 @@ class DailyActivitySensor(SensorEntity):
             return STATE_OFF
         return "unknown"
 
+    def _interrupt_outage(self) -> None:
+        if self._last_outage and self._last_outage["status"] == "ongoing":
+            self._last_outage = {**self._last_outage, "status": "interrupted", "seconds": None}
+
+    def _update_outage(self, previous: str, now: datetime) -> None:
+        current = self._duration_state
+        if previous == STATE_ON and current == STATE_OFF:
+            self._last_outage = {"start": now.isoformat(), "end": None,
+                                 "seconds": 0, "status": "ongoing"}
+        elif self._last_outage and self._last_outage["status"] == "ongoing":
+            if current == STATE_ON and previous == STATE_OFF:
+                seconds = (now - datetime.fromisoformat(self._last_outage["start"])).total_seconds()
+                if seconds >= 0:
+                    self._last_outage = {**self._last_outage, "end": now.isoformat(),
+                                         "seconds": seconds, "status": "completed"}
+                else:
+                    self._interrupt_outage()
+            elif current != STATE_OFF:
+                self._interrupt_outage()
+
     def _accumulate_durations(self, now: datetime, totals: dict) -> None:
         start = self._duration_since
         if start is None:
@@ -242,6 +270,7 @@ class DailyActivitySensor(SensorEntity):
             self._unsub_duration = None
         self._flush_durations(datetime.now(timezone.utc))
         self._duration_since = None
+        self._interrupt_outage()
         await self._save()
 
     def _schedule_duration_checkpoint(self) -> None:
@@ -265,13 +294,16 @@ class DailyActivitySensor(SensorEntity):
                 "last_activity_entity": self._last_activity_entity,
                 "last_activity_name": self._last_activity_name,
                 "last_activity": self._last_activity,
+                "last_outage": self._last_outage,
             }
         )
 
     @callback
     def _async_source_changed(self, event: Event) -> None:
         if self._track_durations:
-            self._flush_durations(datetime.now(timezone.utc))
+            now = datetime.now(timezone.utc)
+            self._flush_durations(now)
+            previous = self._duration_state
             new = event.data.get("new_state")
             old = event.data.get("old_state")
             entity = event.data.get("entity_id") or (
@@ -280,6 +312,7 @@ class DailyActivitySensor(SensorEntity):
             if entity in self._entities:
                 self._source_states[entity] = self._observed_state(new)
             self._duration_state = self._combined_state()
+            self._update_outage(previous, now)
             self.async_write_ha_state()
             self.hass.async_create_task(self._save())
 
@@ -368,6 +401,7 @@ class ReportedActivitySensor(DailyActivitySensor):
         snapshot = self._source.snapshot
         self._history = snapshot["history"]
         self._durations = snapshot["durations"]
+        self._last_outage = snapshot.get("last_outage")
         self._last_activity = snapshot["last_activity"]
         self._last_activity_entity = None
         self._last_activity_name = self.entry.title if self._last_activity else None
